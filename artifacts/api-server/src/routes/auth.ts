@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
@@ -25,7 +25,7 @@ function formatUser(u: typeof usersTable.$inferSelect) {
 }
 
 // POST /api/auth/register
-router.post("/register", async (req, res) => {
+router.post("/register", async (req: Request, res: Response): Promise<void> => {
   const { firstName, lastName, email, password, phone, idNumber } = req.body;
   if (!firstName || !lastName || !email || !password) {
     res.status(400).json({ error: "Missing required fields" });
@@ -40,6 +40,7 @@ router.post("/register", async (req, res) => {
   const [user] = await db.insert(usersTable).values({
     email, passwordHash, firstName, lastName, phone, idNumber, role: "applicant",
   }).returning();
+  
   // Create empty member profile
   await db.insert(membersTable).values({ userId: user.id });
   const { accessToken, refreshToken } = generateTokens(user.id, user.role);
@@ -48,7 +49,7 @@ router.post("/register", async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", async (req: Request, res: Response): Promise<void> => {
   const { email, password, mfaToken } = req.body;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (!user) {
@@ -89,7 +90,7 @@ router.post("/login", async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post("/logout", authenticate, async (req: AuthRequest, res) => {
+router.post("/logout", authenticate, async (req: AuthRequest, res: Response) => {
   if (req.userId) {
     await db.update(usersTable).set({ refreshToken: null }).where(eq(usersTable.id, req.userId));
   }
@@ -97,12 +98,12 @@ router.post("/logout", authenticate, async (req: AuthRequest, res) => {
 });
 
 // GET /api/auth/me
-router.get("/me", authenticate, async (req: AuthRequest, res) => {
+router.get("/me", authenticate, async (req: AuthRequest, res: Response) => {
   res.json(formatUser(req.user!));
 });
 
 // POST /api/auth/refresh
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
   const { refreshToken } = req.body;
   if (!refreshToken) {
     res.status(400).json({ error: "Refresh token required" });
@@ -124,10 +125,9 @@ router.post("/refresh", async (req, res) => {
 });
 
 // POST /api/auth/password-reset-request
-router.post("/password-reset-request", async (req, res) => {
+router.post("/password-reset-request", async (req: Request, res: Response) => {
   const { email } = req.body;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  // Always return success to prevent user enumeration
   if (user) {
     const token = jwt.sign({ userId: user.id, type: "reset" }, JWT_SECRET, { expiresIn: "1h" });
     const expiry = new Date(Date.now() + 3600000);
@@ -138,7 +138,7 @@ router.post("/password-reset-request", async (req, res) => {
 });
 
 // POST /api/auth/password-reset
-router.post("/password-reset", async (req, res) => {
+router.post("/password-reset", async (req: Request, res: Response): Promise<void> => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
     res.status(400).json({ error: "Token and new password required" });
@@ -165,7 +165,7 @@ router.post("/password-reset", async (req, res) => {
 });
 
 // POST /api/auth/mfa/setup
-router.post("/mfa/setup", authenticate, async (req: AuthRequest, res) => {
+router.post("/mfa/setup", authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "admin") {
     res.status(403).json({ error: "MFA setup is for admin accounts only" });
     return;
@@ -181,7 +181,7 @@ router.post("/mfa/setup", authenticate, async (req: AuthRequest, res) => {
 });
 
 // POST /api/auth/mfa/verify
-router.post("/mfa/verify", async (req, res) => {
+router.post("/mfa/verify", async (req: Request, res: Response): Promise<void> => {
   const { token, sessionToken } = req.body;
   if (!token || !sessionToken) {
     res.status(400).json({ error: "Token and session token required" });
@@ -216,8 +216,8 @@ router.post("/mfa/verify", async (req, res) => {
   }
 });
 
-// POST /api/auth/mfa/confirm  — confirm TOTP code while already authenticated (enables MFA on first use)
-router.post("/mfa/confirm", authenticate, async (req: AuthRequest, res) => {
+// POST /api/auth/mfa/confirm
+router.post("/mfa/confirm", authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "admin") {
     res.status(403).json({ error: "MFA is for admin accounts only" });
     return;
@@ -243,11 +243,14 @@ router.post("/mfa/confirm", authenticate, async (req: AuthRequest, res) => {
     return;
   }
   await db.update(usersTable).set({ mfaEnabled: true }).where(eq(usersTable.id, user.id));
-  res.json({ message: "MFA enabled successfully", user: formatUser({ ...user, mfaEnabled: true }) });
+  
+  // Safe mutation mapping rather than unchecked object spreading
+  const updatedUser = { ...user, mfaEnabled: true };
+  res.json({ message: "MFA enabled successfully", user: formatUser(updatedUser) });
 });
 
-// DELETE /api/auth/mfa  — disable MFA (admin only, requires TOTP verification)
-router.delete("/mfa", authenticate, async (req: AuthRequest, res) => {
+// DELETE /api/auth/mfa
+router.delete("/mfa", authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "admin") {
     res.status(403).json({ error: "MFA is for admin accounts only" });
     return;
