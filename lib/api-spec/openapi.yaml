@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Ujima SACCO AI Pride Ecosystem API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and authorization
+  - name: users
+    description: User management
+  - name: members
+    description: Member profiles and KYC
+  - name: loans
+    description: Loan products and applications
+  - name: documents
+    description: Document uploads
+  - name: ai
+    description: AI assessment pipeline
+  - name: admin
+    description: Admin operations
+  - name: analytics
+    description: Analytics and reporting
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +39,1436 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new applicant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenInput"
+      responses:
+        "200":
+          description: New token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/password-reset-request:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequestInput"
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/password-reset:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/mfa/setup:
+    post:
+      operationId: setupMfa
+      tags: [auth]
+      summary: Setup MFA (admin only)
+      responses:
+        "200":
+          description: MFA setup data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaSetupResponse"
+
+  /auth/mfa/verify:
+    post:
+      operationId: verifyMfa
+      tags: [auth]
+      summary: Verify MFA token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaVerifyInput"
+      responses:
+        "200":
+          description: MFA verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  # ── USERS ─────────────────────────────────────────────────────────────────
+  /users/profile:
+    get:
+      operationId: getProfile
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/change-password:
+    post:
+      operationId: changePassword
+      tags: [users]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── MEMBERS ───────────────────────────────────────────────────────────────
+  /members/kyc:
+    get:
+      operationId: getKyc
+      tags: [members]
+      summary: Get KYC information
+      responses:
+        "200":
+          description: KYC data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycProfile"
+    post:
+      operationId: submitKyc
+      tags: [members]
+      summary: Submit KYC information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycInput"
+      responses:
+        "200":
+          description: KYC submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycProfile"
+
+  /members/dashboard:
+    get:
+      operationId: getMemberDashboard
+      tags: [members]
+      summary: Member dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDashboard"
+
+  # ── LOAN PRODUCTS ─────────────────────────────────────────────────────────
+  /loan-products:
+    get:
+      operationId: listLoanProducts
+      tags: [loans]
+      summary: List all loan products
+      responses:
+        "200":
+          description: Loan products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanProduct"
+
+  /loan-products/{id}:
+    get:
+      operationId: getLoanProduct
+      tags: [loans]
+      summary: Get a loan product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Loan product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanProduct"
+
+  # ── LOAN APPLICATIONS ─────────────────────────────────────────────────────
+  /loan-applications:
+    get:
+      operationId: listLoanApplications
+      tags: [loans]
+      summary: List loan applications for current member
+      responses:
+        "200":
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanApplication"
+    post:
+      operationId: createLoanApplication
+      tags: [loans]
+      summary: Submit a loan application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanApplication"
+
+  /loan-applications/{id}:
+    get:
+      operationId: getLoanApplication
+      tags: [loans]
+      summary: Get a loan application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanApplication"
+
+  /loan-applications/{id}/status:
+    get:
+      operationId: getLoanApplicationStatus
+      tags: [loans]
+      summary: Get application AI pipeline status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPipelineStatus"
+
+  # ── ACTIVE LOANS ──────────────────────────────────────────────────────────
+  /loans:
+    get:
+      operationId: listActiveLoans
+      tags: [loans]
+      summary: List active loans for current member
+      responses:
+        "200":
+          description: Active loans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveLoan"
+
+  /loans/{id}:
+    get:
+      operationId: getActiveLoan
+      tags: [loans]
+      summary: Get active loan detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Active loan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLoan"
+
+  # ── DOCUMENTS ─────────────────────────────────────────────────────────────
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents for current member
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      summary: Upload a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documents/{id}:
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── AI ASSESSMENT ─────────────────────────────────────────────────────────
+  /ai/assessments/{applicationId}:
+    get:
+      operationId: getAiAssessment
+      tags: [ai]
+      summary: Get AI assessment for an application
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: AI assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAssessment"
+
+  /ai/trigger/{applicationId}:
+    post:
+      operationId: triggerAiPipeline
+      tags: [ai]
+      summary: Trigger AI pipeline for an application
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pipeline triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── ADMIN ─────────────────────────────────────────────────────────────────
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Admin dashboard overview
+      responses:
+        "200":
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/loan-applications:
+    get:
+      operationId: listAllLoanApplications
+      tags: [admin]
+      summary: List all loan applications (admin)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: All applications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedLoanApplications"
+
+  /admin/loan-applications/{id}/review:
+    post:
+      operationId: reviewLoanApplication
+      tags: [admin]
+      summary: Approve or reject a loan application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanReviewInput"
+      responses:
+        "200":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanApplication"
+
+  /admin/loans:
+    get:
+      operationId: listAllActiveLoans
+      tags: [admin]
+      summary: List all active loans (admin)
+      responses:
+        "200":
+          description: All active loans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveLoan"
+
+  /admin/members:
+    get:
+      operationId: listMembers
+      tags: [admin]
+      summary: List all members (admin)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedMembers"
+
+  /admin/members/{id}:
+    get:
+      operationId: getMember
+      tags: [admin]
+      summary: Get member detail (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDetail"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users (admin)
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Update a user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/users/{id}/deactivate:
+    post:
+      operationId: deactivateUser
+      tags: [admin]
+      summary: Deactivate a user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── ANALYTICS ─────────────────────────────────────────────────────────────
+  /analytics/portfolio:
+    get:
+      operationId: getPortfolioAnalytics
+      tags: [analytics]
+      summary: Loan portfolio analytics
+      responses:
+        "200":
+          description: Portfolio analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioAnalytics"
+
+  /analytics/risk-distribution:
+    get:
+      operationId: getRiskDistribution
+      tags: [analytics]
+      summary: Risk score distribution
+      responses:
+        "200":
+          description: Risk distribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskDistribution"
+
+  /analytics/lending-trends:
+    get:
+      operationId: getLendingTrends
+      tags: [analytics]
+      summary: Monthly lending trends
+      responses:
+        "200":
+          description: Lending trends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LendingTrendPoint"
+
+  /analytics/member-growth:
+    get:
+      operationId: getMemberGrowth
+      tags: [analytics]
+      summary: Member growth over time
+      responses:
+        "200":
+          description: Member growth
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GrowthPoint"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    # ── AUTH SCHEMAS ────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [firstName, lastName, email, password, phone, idNumber]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        idNumber:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        mfaToken:
+          type: ["string", "null"]
+
+    RefreshTokenInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    PasswordResetRequestInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    PasswordResetInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+
+    MfaVerifyInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        sessionToken:
+          type: ["string", "null"]
+
+    AuthResponse:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: ["string", "null"]
+        requiresMfa:
+          type: ["boolean", "null"]
+        sessionToken:
+          type: ["string", "null"]
+        user:
+          $ref: "#/components/schemas/User"
+
+    MfaSetupResponse:
+      type: object
+      required: [secret, qrCode, backupCodes]
+      properties:
+        secret:
+          type: string
+        qrCode:
+          type: string
+        backupCodes:
+          type: array
+          items:
+            type: string
+
+    # ── USER SCHEMAS ────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, firstName, lastName, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [applicant, admin]
+        isActive:
+          type: boolean
+        mfaEnabled:
+          type: ["boolean", "null"]
+        createdAt:
+          type: string
+
+    UserProfile:
+      type: object
+      required: [id, email, firstName, lastName, role]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        mfaEnabled:
+          type: ["boolean", "null"]
+        kycStatus:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+        isActive:
+          type: boolean
+
+    # ── KYC SCHEMAS ─────────────────────────────────────────────────────────
+    KycInput:
+      type: object
+      required: [dateOfBirth, gender, county, subCounty, ward, employmentStatus, monthlyIncome]
+      properties:
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+        county:
+          type: string
+        subCounty:
+          type: string
+        ward:
+          type: string
+        physicalAddress:
+          type: string
+        employmentStatus:
+          type: string
+        employerName:
+          type: ["string", "null"]
+        monthlyIncome:
+          type: number
+        otherIncome:
+          type: ["number", "null"]
+        nextOfKinName:
+          type: string
+        nextOfKinPhone:
+          type: string
+        nextOfKinRelationship:
+          type: string
+
+    KycProfile:
+      type: object
+      required: [id, userId, status]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        dateOfBirth:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        county:
+          type: ["string", "null"]
+        subCounty:
+          type: ["string", "null"]
+        ward:
+          type: ["string", "null"]
+        physicalAddress:
+          type: ["string", "null"]
+        employmentStatus:
+          type: ["string", "null"]
+        employerName:
+          type: ["string", "null"]
+        monthlyIncome:
+          type: ["number", "null"]
+        otherIncome:
+          type: ["number", "null"]
+        nextOfKinName:
+          type: ["string", "null"]
+        nextOfKinPhone:
+          type: ["string", "null"]
+        nextOfKinRelationship:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, submitted, verified, rejected]
+        createdAt:
+          type: string
+
+    # ── LOAN PRODUCT SCHEMAS ─────────────────────────────────────────────────
+    LoanProduct:
+      type: object
+      required: [id, name, type, minAmount, maxAmount, minTenureMonths, maxTenureMonths, interestRate]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [business, vendor, agricultural, education, emergency, asset_financing]
+        description:
+          type: ["string", "null"]
+        minAmount:
+          type: number
+        maxAmount:
+          type: number
+        minTenureMonths:
+          type: integer
+        maxTenureMonths:
+          type: integer
+        interestRate:
+          type: number
+        requirements:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # ── LOAN APPLICATION SCHEMAS ─────────────────────────────────────────────
+    LoanApplicationInput:
+      type: object
+      required: [loanProductId, requestedAmount, tenureMonths, purpose, employmentStatus, monthlyIncome]
+      properties:
+        loanProductId:
+          type: integer
+        requestedAmount:
+          type: number
+        tenureMonths:
+          type: integer
+        purpose:
+          type: string
+        employmentStatus:
+          type: string
+        employerName:
+          type: ["string", "null"]
+        monthlyIncome:
+          type: number
+        otherIncome:
+          type: ["number", "null"]
+        existingLoans:
+          type: ["number", "null"]
+        businessName:
+          type: ["string", "null"]
+        businessType:
+          type: ["string", "null"]
+        businessRevenue:
+          type: ["number", "null"]
+        collateralDescription:
+          type: ["string", "null"]
+
+    LoanApplication:
+      type: object
+      required: [id, userId, loanProductId, requestedAmount, tenureMonths, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        loanProductId:
+          type: integer
+        loanProduct:
+          $ref: "#/components/schemas/LoanProduct"
+        requestedAmount:
+          type: number
+        tenureMonths:
+          type: integer
+        purpose:
+          type: string
+        status:
+          type: string
+          enum: [submitted, under_review, additional_info_required, approved, rejected, disbursed]
+        employmentStatus:
+          type: string
+        monthlyIncome:
+          type: number
+        approvedAmount:
+          type: ["number", "null"]
+        approvedTenure:
+          type: ["integer", "null"]
+        adminNotes:
+          type: ["string", "null"]
+        rejectionReason:
+          type: ["string", "null"]
+        pipelineStage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ApplicationPipelineStatus:
+      type: object
+      required: [applicationId, currentStage, stages]
+      properties:
+        applicationId:
+          type: integer
+        currentStage:
+          type: string
+        stages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PipelineStage"
+        aiAssessment:
+          $ref: "#/components/schemas/AiAssessment"
+
+    PipelineStage:
+      type: object
+      required: [name, label, status]
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        labelSw:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        completedAt:
+          type: ["string", "null"]
+
+    LoanReviewInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected, additional_info_required]
+        approvedAmount:
+          type: ["number", "null"]
+        approvedTenure:
+          type: ["integer", "null"]
+        adminNotes:
+          type: ["string", "null"]
+        rejectionReason:
+          type: ["string", "null"]
+
+    # ── ACTIVE LOAN SCHEMAS ──────────────────────────────────────────────────
+    ActiveLoan:
+      type: object
+      required: [id, userId, applicationId, principalAmount, outstandingBalance, status, disbursedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        applicationId:
+          type: integer
+        loanProduct:
+          $ref: "#/components/schemas/LoanProduct"
+        principalAmount:
+          type: number
+        outstandingBalance:
+          type: number
+        interestRate:
+          type: number
+        tenureMonths:
+          type: integer
+        monthlyInstalment:
+          type: number
+        totalRepaid:
+          type: number
+        nextPaymentDate:
+          type: ["string", "null"]
+        maturityDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, closed, defaulted, written_off]
+        disbursedAt:
+          type: string
+        memberName:
+          type: ["string", "null"]
+
+    # ── DOCUMENT SCHEMAS ────────────────────────────────────────────────────
+    DocumentInput:
+      type: object
+      required: [fileName, fileType, documentType, fileData]
+      properties:
+        fileName:
+          type: string
+        fileType:
+          type: string
+        documentType:
+          type: string
+          enum: [national_id, passport, kra_pin, payslip, bank_statement, business_certificate, title_deed, other]
+        applicationId:
+          type: ["integer", "null"]
+        fileData:
+          type: string
+          description: Base64 encoded file content
+
+    Document:
+      type: object
+      required: [id, userId, fileName, documentType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        applicationId:
+          type: ["integer", "null"]
+        fileName:
+          type: string
+        fileType:
+          type: string
+        documentType:
+          type: string
+        status:
+          type: string
+          enum: [uploaded, verified, rejected]
+        createdAt:
+          type: string
+
+    # ── AI SCHEMAS ──────────────────────────────────────────────────────────
+    AiAssessment:
+      type: object
+      required: [id, applicationId, creditScore, riskScore, confidenceScore, approvalProbability, recommendedLimit]
+      properties:
+        id:
+          type: integer
+        applicationId:
+          type: integer
+        creditScore:
+          type: number
+          description: 300-850
+        riskScore:
+          type: number
+          description: 0-100 (lower is better)
+        confidenceScore:
+          type: number
+          description: 0-100
+        approvalProbability:
+          type: number
+          description: 0-100
+        recommendedLimit:
+          type: number
+        riskLevel:
+          type: string
+          enum: [low, medium, high, very_high]
+        scoutSummary:
+          type: ["string", "null"]
+        guardianSummary:
+          type: ["string", "null"]
+        hunterSummary:
+          type: ["string", "null"]
+        loanTerms:
+          type: ["object", "null"]
+        repaymentPlan:
+          type: ["object", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ── DASHBOARD SCHEMAS ────────────────────────────────────────────────────
+    MemberDashboard:
+      type: object
+      required: [totalApplications, activeLoans, totalBorrowed, outstandingBalance, kycStatus]
+      properties:
+        totalApplications:
+          type: integer
+        activeLoans:
+          type: integer
+        totalBorrowed:
+          type: number
+        outstandingBalance:
+          type: number
+        kycStatus:
+          type: string
+        recentApplications:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanApplication"
+        activeLoansDetail:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveLoan"
+
+    AdminDashboard:
+      type: object
+      required: [totalMembers, totalApplications, pendingApplications, approvedLoans, activeLoans, portfolioValue, defaultRate, approvalRate]
+      properties:
+        totalMembers:
+          type: integer
+        totalApplications:
+          type: integer
+        pendingApplications:
+          type: integer
+        approvedLoans:
+          type: integer
+        activeLoans:
+          type: integer
+        portfolioValue:
+          type: number
+        defaultRate:
+          type: number
+        approvalRate:
+          type: number
+        recentApplications:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanApplication"
+        applicationsByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusCount"
+
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+
+    # ── PAGINATION SCHEMAS ───────────────────────────────────────────────────
+    PaginatedLoanApplications:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanApplication"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    PaginatedMembers:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberDetail"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    MemberDetail:
+      type: object
+      required: [id, email, firstName, lastName, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        isActive:
+          type: boolean
+        kycStatus:
+          type: ["string", "null"]
+        totalApplications:
+          type: ["integer", "null"]
+        activeLoans:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    # ── ANALYTICS SCHEMAS ────────────────────────────────────────────────────
+    PortfolioAnalytics:
+      type: object
+      required: [totalDisbursed, totalOutstanding, totalRepaid, averageLoanSize, averageTenure, productBreakdown]
+      properties:
+        totalDisbursed:
+          type: number
+        totalOutstanding:
+          type: number
+        totalRepaid:
+          type: number
+        averageLoanSize:
+          type: number
+        averageTenure:
+          type: number
+        productBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductBreakdown"
+
+    ProductBreakdown:
+      type: object
+      required: [productType, count, totalAmount]
+      properties:
+        productType:
+          type: string
+        count:
+          type: integer
+        totalAmount:
+          type: number
+
+    RiskDistribution:
+      type: object
+      required: [low, medium, high, veryHigh]
+      properties:
+        low:
+          type: integer
+        medium:
+          type: integer
+        high:
+          type: integer
+        veryHigh:
+          type: integer
+
+    LendingTrendPoint:
+      type: object
+      required: [month, disbursed, repaid, applications]
+      properties:
+        month:
+          type: string
+        disbursed:
+          type: number
+        repaid:
+          type: number
+        applications:
+          type: integer
+
+    GrowthPoint:
+      type: object
+      required: [month, newMembers, totalMembers]
+      properties:
+        month:
+          type: string
+        newMembers:
+          type: integer
+        totalMembers:
+          type: integer

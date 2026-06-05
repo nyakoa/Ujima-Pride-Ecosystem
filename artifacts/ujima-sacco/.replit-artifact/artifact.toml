@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Ujima SACCO AI Pride Ecosystem"
+version = "1.0.0"
+id = "artifacts/ujima-sacco"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24587
+
+[services.development]
+run = "pnpm --filter @workspace/ujima-sacco run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ujima-sacco", "run", "build" ]
+publicDir = "artifacts/ujima-sacco/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24587"
+BASE_PATH = "/"

@@ -1,0 +1,1 @@
+- [Ujima SACCO architecture](ujima-sacco-arch.md) — key gotchas for this project's auth, AI pipeline, and token injection patterns
