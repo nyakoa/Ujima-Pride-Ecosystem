@@ -216,4 +216,64 @@ router.post("/mfa/verify", async (req, res) => {
   }
 });
 
+// POST /api/auth/mfa/confirm  — confirm TOTP code while already authenticated (enables MFA on first use)
+router.post("/mfa/confirm", authenticate, async (req: AuthRequest, res) => {
+  if (req.user?.role !== "admin") {
+    res.status(403).json({ error: "MFA is for admin accounts only" });
+    return;
+  }
+  const { token } = req.body;
+  if (!token) {
+    res.status(400).json({ error: "TOTP token required" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id)).limit(1);
+  if (!user?.mfaSecret) {
+    res.status(400).json({ error: "MFA not set up. Call /api/auth/mfa/setup first." });
+    return;
+  }
+  const verified = speakeasy.totp.verify({
+    secret: user.mfaSecret,
+    encoding: "base32",
+    token,
+    window: 2,
+  });
+  if (!verified) {
+    res.status(401).json({ error: "Invalid authenticator code" });
+    return;
+  }
+  await db.update(usersTable).set({ mfaEnabled: true }).where(eq(usersTable.id, user.id));
+  res.json({ message: "MFA enabled successfully", user: formatUser({ ...user, mfaEnabled: true }) });
+});
+
+// DELETE /api/auth/mfa  — disable MFA (admin only, requires TOTP verification)
+router.delete("/mfa", authenticate, async (req: AuthRequest, res) => {
+  if (req.user?.role !== "admin") {
+    res.status(403).json({ error: "MFA is for admin accounts only" });
+    return;
+  }
+  const { token } = req.body;
+  if (!token) {
+    res.status(400).json({ error: "TOTP token required to disable MFA" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id)).limit(1);
+  if (!user?.mfaSecret) {
+    res.status(400).json({ error: "MFA not configured" });
+    return;
+  }
+  const verified = speakeasy.totp.verify({
+    secret: user.mfaSecret,
+    encoding: "base32",
+    token,
+    window: 2,
+  });
+  if (!verified) {
+    res.status(401).json({ error: "Invalid authenticator code" });
+    return;
+  }
+  await db.update(usersTable).set({ mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null }).where(eq(usersTable.id, user.id));
+  res.json({ message: "MFA disabled successfully" });
+});
+
 export default router;
