@@ -1,9 +1,9 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import { pinoHttp } from "pino-http"; // Fixed: Changed to named import
+import { pinoHttp } from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import type { IncomingMessage, ServerResponse } from "http"; // Added for serializer types
+import type { IncomingMessage, ServerResponse } from "http";
 
 const app: Express = express();
 
@@ -11,15 +11,14 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
-      // Fixed: Added explicit typing to 'req'
-      req(req: IncomingMessage & { id?: string | number }) {
+      // Custom type intersection handles the pino-specific 'id' field on the incoming request
+      req(req: IncomingMessage & { id?: string | number | undefined }) {
         return {
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
         };
       },
-      // Fixed: Added explicit typing to 'res'
       res(res: ServerResponse) {
         return {
           statusCode: res.statusCode,
